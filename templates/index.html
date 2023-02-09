@@ -1,0 +1,364 @@
+<!doctype html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <title>Document</title>
+
+    <style>
+        canvas {
+          width: 100%;
+          height: 100%;
+          display: block;
+        }
+
+        .v-enter-active,
+        .v-leave-active {
+          transition: opacity 0.5s ease;
+        }
+
+        .v-enter-from,
+        .v-leave-to {
+          opacity: 0;
+        }
+    </style>
+
+    <!--  Mai bine era sa-l importam ca modul   -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js" integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" crossorigin="anonymous"></script>
+
+
+</head>
+<body>
+    <div class="min-vh-100 d-flex" id="app">
+
+        <div class="w-100 h-100 my-auto text-center"
+             v-if="loading">
+            <span class="spinner-border text-success" role="status"></span>
+        </div>
+
+        <Transition>
+            <div v-show="!loading" class="container">
+
+
+                <div class="row mt-4">
+                    <div class="col-6">
+                        <div class="card">
+                            <div class="card-header text-center">Records</div>
+                            <div class="card-body text-center">
+                                [[ data.records ]]
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card">
+                            <div class="card-header text-center">Null Records</div>
+                            <div class="card-body text-center">
+                                [[ data.null_records ]]
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-5">
+                    <div class="col-12 mb-3">
+                        <div class="card">
+                            <div class="card-header">Popularitate articole</div>
+                            <div class="card-body text-center">
+                                <button v-if="!popularity.data?.image && !popularity.loading" @click="generateCountPilot" class="btn btn-primary">Genereaza</button>
+                                <span v-else-if="!popularity.data?.image && popularity?.loading" class="spinner-border text-success" role="status"></span>
+                                <img class="img-fluid" v-else  :src='`data:image/png;base64,${popularity.data.image}`'  alt="">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card">
+                            <div class="card-header">Recomandari pentru articole bune</div>
+                            <div class="card-body text-center">
+                                <button v-if="!predictions.data?.image && !predictions.loading" @click="generatePredictions" class="btn btn-primary">Genereaza</button>
+                                <span v-else-if="!predictions.data?.image && predictions?.loading" class="spinner-border text-success" role="status"></span>
+                                <img class="img-fluid" v-else  :src='`data:image/png;base64,${predictions.data.image}`'  alt="">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card">
+                            <div class="card-header">Numarul de articole pe zile</div>
+                            <div class="card-body text-center">
+                                <button @click="generateNumberOfArticles" class="btn btn-primary" v-if="!numberOfArticles.data?.Monday && !numberOfArticles.loading">Genereaza</button>
+                                <span v-else-if="!numberOfArticles.data?.Monday && numberOfArticles?.loading" class="spinner-border text-success" role="status"></span>
+                                <table v-else class="table">
+                                    <thead>
+                                        <th>Luni</th>
+                                        <th>Marti</th>
+                                        <th>Miercuri</th>
+                                        <th>Joi</th>
+                                        <th>Vineri</th>
+                                        <th>Sambata</th>
+                                        <th>Duminica</th>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td v-for="day in Object.keys(numberOfArticles.data)">
+                                                [[ numberOfArticles.data[day] ]]
+                                            </td>
+                                        </tr>
+
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-5">
+                    <div class="col-6">
+                        <div class="card">
+                            <div class="card-header">Corelatia dintre variabila dependenta si variabilele independente</div>
+                            <div class="card-body text-center">
+                                <button v-if="!image?.src && !image?.loading" @click="generateImage(1)" class="btn btn-primary">Genereaza</button>
+                                <span v-else-if="!image?.src && image?.loading" class="spinner-border text-success" role="status"></span>
+                                <img class="img-fluid"  :src='`data:image/png;base64,${image.src}`' alt="">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card">
+                            <div class="card-header">Corelatia dintre variabilele independente</div>
+                            <div class="card-body text-center">
+                                <button v-if="!imageCorrDep?.src && !imageCorrDep?.loading" @click="generateImage(2)" class="btn btn-primary">Genereaza</button>
+                                <span v-else-if="!imageCorrDep?.src && imageCorrDep?.loading" class="spinner-border text-success" role="status"></span>
+                                <img class="img-fluid"  :src='`data:image/png;base64,${imageCorrDep.src}`' alt="">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-5">
+                    <div class="col-6">
+                        <p>
+                          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCvartile" aria-expanded="false" aria-controls="collapseCvartile">
+                            Afiseaza cvartilele
+                          </button>
+                        </p>
+                        <div class="card collapse" id="collapseCvartile">
+                            <div class="card-body" >
+                                <table>
+                                    <thead>
+                                        <th>Coloana</th>
+                                        <th>Q1</th>
+                                        <th>Q2</th>
+                                        <th>Q3</th>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="column in Object.keys(quantiles)">
+                                            <td>[[ column ]]</td>
+                                            <td>[[ quantiles[column]["0.25"] ]]</td>
+                                            <td>[[ quantiles[column]["0.5"] ]]</td>
+                                            <td>[[ quantiles[column]["0.75"] ]]</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            </div>
+                        </div>
+                    <div class="col-6">
+                        <p>
+                          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMedie" aria-expanded="false" aria-controls="collapseMedie">
+                            Arata media coloanelor
+                          </button>
+                        </p>
+                        <div class="collapse" id="collapseMedie">
+                          <div class="card card-body">
+                            <div v-for="column in Object.keys(mean)">
+                                <span>
+                                    <strong>[[ column ]]: </strong>
+                                    [[ mean[column] ]]
+                                </span>
+                            </div>
+                          </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <p>
+                          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDeviatia" aria-expanded="false" aria-controls="collapseDeviatia">
+                            Afiseaza deviatia
+                          </button>
+                        </p>
+                        <div class="card collapse" id="collapseDeviatia">
+                            <div class="card-body" >
+                                <table>
+                                    <thead>
+                                        <th>Coloana</th>
+                                        <th>Deviatia</th>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="column in Object.keys(deviatia)">
+                                            <td>[[ column ]]</td>
+                                            <td>[[ deviatia[column] ]]</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            </div>
+                        </div>
+                    <div class="col-6">
+                        <p>
+                          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMedian" aria-expanded="false" aria-controls="collapseMedian">
+                            Afiseaza mediana
+                          </button>
+                        </p>
+                        <div class="card collapse" id="collapseMedian">
+                            <div class="card-body" >
+                                <table>
+                                    <thead>
+                                        <th>Coloana</th>
+                                        <th>Mediana</th>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="column in Object.keys(median)">
+                                            <td>[[ column ]]</td>
+                                            <td>[[ median[column] ]]</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            </div>
+                        </div>
+                    <div class="col-6">
+                        <p>
+                          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseNumbers" aria-expanded="false" aria-controls="collapseNumbers">
+                            Afiseaza variabilele numerice
+                          </button>
+                        </p>
+                        <div class="card collapse" id="collapseNumbers">
+                            <div class="card-body" >
+                                 <div v-for="column in number_cols">
+                                     [[ column ]]
+                                 </div>
+                            </div>
+                            </div>
+                        </div>
+                    <div class="col-6">
+                        <p>
+                          <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCats" aria-expanded="false" aria-controls="collapseCats">
+                            Afiseaza variabilele categoriale
+                          </button>
+                        </p>
+                        <div class="card collapse" id="collapseCats">
+                            <div class="card-body" >
+                                 <div v-for="column in categorials_cols">
+                                     [[ column ]]
+                                 </div>
+                            </div>
+                            </div>
+                        </div>
+
+                </div>
+
+            </div>
+        </Transition>
+
+
+
+    </div>
+
+<!--    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>-->
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    data: [],
+                    mean: [],
+                    loading: true,
+                    quantiles: {},
+                    deviatia: {},
+                    median: {},
+                    number_cols: [],
+                    categorials_cols: [],
+                    image: {
+                        src: '',
+                        loading: false,
+                    },
+                    imageCorrDep: {
+                        src: '',
+                        loading: false,
+                    },
+                    numberOfArticles: {
+                        loading: false,
+                        data: {}
+                    },
+                    popularity: {
+                        loading: false,
+                        data: {}
+                    },
+                    predictions: {
+                        loading: false,
+                        data: {}
+                    }
+                }
+            },
+            async mounted() {
+                const res = await fetch('api/v1/data')
+                this.data = await res.json()
+                this.mean = JSON.parse(this.data?.media)
+                this.quantiles = JSON.parse(this.data?.cvartile)
+                this.deviatia = JSON.parse(this.data?.deviatia)
+                this.median = JSON.parse(this.data?.median)
+                this.number_cols = JSON.parse(this.data?.number_cols)
+                this.categorials_cols = JSON.parse(this.data?.categorials_cols)
+                this.loading = false
+
+            },
+            methods: {
+                generateImage: async function(corr = 1) {
+
+                    if(corr === 1) this.image.loading = true
+                    else this.imageCorrDep.loading = true
+                    const res = await fetch(`api/v1/getImage?corr=${corr}`)
+                    const data = await res.json()
+
+                    if(corr === 1) {
+                        this.image.src = data.image
+                        this.image.loading = false
+                    }
+                    else {
+                        this.imageCorrDep.src = data.image
+                        this.imageCorrDep.loading = false
+                    }
+                },
+                generateNumberOfArticles: async function() {
+
+                    this.numberOfArticles.loading = true
+                    const res = await fetch('/api/v1/getNumberOfArticles')
+                    this.numberOfArticles.data = await res.json()
+                    this.numberOfArticles.loading = false
+                },
+                generateCountPilot: async function() {
+                    this.popularity.loading = true
+                    const res= await fetch('/api/v1/showPopularity')
+                    this.popularity.data = await res.json()
+                    this.popularity.loading = false
+                },
+                generatePredictions: async function() {
+                    this.predictions.loading = true
+                    const res= await fetch('/api/v1/makePredictions')
+                    this.predictions.data = await res.json()
+                    this.predictions.loading = false
+                }
+            },
+
+
+        //   Din cauza ca vue foloseste acelasi delimiter pt variabiale ca si Django, trebuie sa facem un mic overwrite la el.
+            delimiters: ["[[", "]]"],
+        }).mount('#app')
+
+
+    </script>
+
+</body>
+</html>
